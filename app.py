@@ -8,12 +8,13 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from flask_bcrypt import Bcrypt
 from dotenv import load_dotenv
 from PIL import Image
+
 import google.generativeai as genai
 from stability_sdk import client
 import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
 from deep_translator import GoogleTranslator
 
-# --- 1. 기본 설정 (Flask + AI) ---
+# --- 1. 기본 설정 ---
 load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key_for_dev_123')
@@ -26,6 +27,7 @@ bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login' 
 
+
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY)
 CHAT_MODEL_NAME = "models/gemini-pro-latest"
@@ -37,7 +39,7 @@ stability_api = client.StabilityInference(
     engine="stable-diffusion-xl-1024-v1-0"
 )
 
-# --- 2. 데이터베이스 모델 (테이블) 설계 ---
+# --- 2. 데이터베이스 모델 ---
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
@@ -77,7 +79,7 @@ def translate(text):
         print(f"번역 오류: {e}")
         return text
 
-# --- 4. 웹페이지 라우트(주소) ---
+# --- 4. 웹페이지 라우트 ---
 @app.route("/")
 @app.route("/home")
 @login_required
@@ -114,8 +116,8 @@ def register():
         user = User(username=request.form.get('username'), password=hashed_password)
         db.session.add(user)
         db.session.commit()
-        flash('회원가입 성공! 이제 로그인할 수 있습니다.', 'success')
-        return redirect(url_for('login'))
+        login_user(user)  
+        return redirect(url_for('home'))
     return render_template('register.html')
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -155,12 +157,27 @@ def api_create_pet():
         t_food = translate(favorite_food)
         t_background = translate(background)
         
-        prompt = f"A cute, happy, {t_color} {t_breed} dog, {age}, eating a {t_food}, in {t_background}. 3D Pixar style, character portrait, smiling."
+        prompt = (
+            f"A highly detailed, realistic 3D Pixar style portrait of a cute {t_color} {t_breed} dog. "
+            f"The dog is {age} years old, looking happy and smiling. "
+            f"It is eating {t_food} in a {t_background} setting. "
+            "Cinematic lighting, high quality, trending on artstation."
+        )
         
-        answers = stability_api.generate(prompt=prompt, steps=30, cfg_scale=7.0)
+        answers = stability_api.generate(
+            prompt=prompt,
+            steps=30, 
+            cfg_scale=7.0,
+            width=1024,  
+            height=1024, 
+            samples=1,  
+        )
+
         image_bytes = None
         for resp in answers:
             for artifact in resp.artifacts:
+                if artifact.finish_reason == generation.FILTER:
+                    raise Exception("이미지가 안전 필터에 걸렸습니다. 다른 단어를 사용해보세요.")
                 if artifact.type == generation.ARTIFACT_IMAGE:
                     image_bytes = artifact.binary
                     break
@@ -188,7 +205,7 @@ def api_create_pet():
         
         model = genai.GenerativeModel(CHAT_MODEL_NAME)
         chat = model.start_chat(history=[
-            {"role": "user", "parts": [new_pet.persona_prompt]},
+            {"role": "user", "parts": [persona_prompt]},
             {"role": "model", "parts": [f"알았어! 난 너의 다정한 친구, {new_pet.name}이야!"]}
         ])
         response = chat.send_message(f"'{name}'으로서 사용자에게 반말로 따뜻한 첫인사를 건네줘. 보고 싶었다는 내용을 포함해서.")
@@ -206,7 +223,7 @@ def api_create_pet():
         })
     
     except Exception as e:
-        print(f"오류: {e}")
+        print(f"오류 상세: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route("/api/chat/<int:pet_id>", methods=['POST'])
@@ -220,27 +237,26 @@ def api_chat(pet_id):
     if not message:
         return jsonify({'reply': "..."})
         
+
     history_db = ChatHistory.query.filter_by(pet_id=pet.id).order_by(ChatHistory.id.asc()).all()
     
     chat_session_history = [
         {"role": "user", "parts": [pet.persona_prompt]},
         {"role": "model", "parts": [f"알았어! 난 너의 다정한 친구, {pet.name}이야!"]}
     ]
-    
     for entry in history_db:
         chat_session_history.append({"role": entry.role, "parts": [entry.content]})
 
     try:
         model = genai.GenerativeModel(CHAT_MODEL_NAME)
         chat = model.start_chat(history=chat_session_history)
-        
         response = chat.send_message(message, request_options={'timeout': 30})
         reply = response.text
         
         db.session.add(ChatHistory(role='user', content=message, pet_id=pet.id))
         db.session.add(ChatHistory(role='model', content=reply, pet_id=pet.id))
         db.session.commit()
-
+        
         return jsonify({'reply': reply})
     except Exception as e:
         print(f"채팅 오류: {e}")
@@ -250,21 +266,15 @@ def api_chat(pet_id):
 @login_required
 def api_delete_pet(pet_id):
     pet = Pet.query.get_or_404(pet_id)
-    if pet.owner != current_user:
-        return jsonify({'success': False, 'error': '권한이 없습니다.'}), 403
-    
+    if pet.owner != current_user: return jsonify({'success': False}), 403
     try:
         ChatHistory.query.filter_by(pet_id=pet.id).delete()
         db.session.delete(pet)
         db.session.commit()
-        
-        print(f"강아지 ID {pet.id} ({pet.name}) 삭제 성공")
         return jsonify({'success': True})
     except Exception as e:
-        print(f"삭제 오류: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# --- 6. 앱 실행 ---
 if __name__ == '__main__':
     with app.app_context():
         db.create_all() 
