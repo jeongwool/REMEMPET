@@ -14,7 +14,6 @@ from stability_sdk import client
 import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
 from deep_translator import GoogleTranslator
 
-# --- 1. 기본 설정 ---
 load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key_for_dev_123')
@@ -39,7 +38,6 @@ stability_api = client.StabilityInference(
     engine="stable-diffusion-xl-1024-v1-0"
 )
 
-# --- 2. 데이터베이스 모델 ---
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
@@ -69,7 +67,6 @@ class ChatHistory(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# --- 3. AI 헬퍼 함수 ---
 def translate(text):
     if not text:
         return ""
@@ -79,7 +76,6 @@ def translate(text):
         print(f"번역 오류: {e}")
         return text
 
-# --- 4. 웹페이지 라우트 ---
 @app.route("/")
 @app.route("/home")
 @login_required
@@ -96,16 +92,6 @@ def chat_page(pet_id):
         return redirect(url_for('home'))
     
     history_db = ChatHistory.query.filter_by(pet_id=pet.id).order_by(ChatHistory.id.asc()).all()
-    
-    chat_session_history = []
-    chat_session_history.append({"role": "user", "parts": [pet.persona_prompt]})
-    chat_session_history.append({"role": "model", "parts": [f"알았어! 난 너의 다정한 친구, {pet.name}이야!"]})
-    
-    for entry in history_db:
-        chat_session_history.append({"role": entry.role, "parts": [entry.content]})
-        
-    session[f'chat_history_{pet_id}'] = chat_session_history
-
     return render_template('chat.html', pet=pet, history=history_db)
 
 @app.route("/register", methods=['GET', 'POST'])
@@ -116,7 +102,7 @@ def register():
         user = User(username=request.form.get('username'), password=hashed_password)
         db.session.add(user)
         db.session.commit()
-        login_user(user)  
+        login_user(user)
         return redirect(url_for('home'))
     return render_template('register.html')
 
@@ -138,8 +124,6 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-# --- 5. AI 기능 API 엔드포인트 ---
-
 @app.route("/api/create_pet", methods=['POST'])
 @login_required
 def api_create_pet():
@@ -152,27 +136,12 @@ def api_create_pet():
     background = data.get('background')
 
     try:
-        t_breed = translate(breed)
-        t_color = translate(color)
-        t_food = translate(favorite_food)
-        t_background = translate(background)
-        
-        prompt = (
-            f"A highly detailed, realistic 3D Pixar style portrait of a cute {t_color} {t_breed} dog. "
-            f"The dog is {age} years old, looking happy and smiling. "
-            f"It is eating {t_food} in a {t_background} setting. "
-            "Cinematic lighting, high quality, trending on artstation."
+        t_breed, t_color, t_food, t_background = (
+            translate(breed), translate(color), translate(favorite_food), translate(background)
         )
+        prompt = f"A cute, happy {t_color} {t_breed} dog, {age} years old, eating {t_food}, in {t_background}. 3D Pixar style, character portrait, smiling."
         
-        answers = stability_api.generate(
-            prompt=prompt,
-            steps=40, 
-            cfg_scale=7.0,
-            width=1024,  
-            height=1024, 
-            samples=1,  
-        )
-
+        answers = stability_api.generate(prompt=prompt, steps=30, cfg_scale=7.0, width=1024, height=1024, samples=1)
         image_bytes = None
         for resp in answers:
             for artifact in resp.artifacts:
@@ -214,13 +183,7 @@ def api_create_pet():
         db.session.add(ChatHistory(role='model', content=first_message, pet_id=new_pet.id))
         db.session.commit()
 
-        return jsonify({
-            'success': True, 
-            'pet_id': new_pet.id, 
-            'image_b64': image_b64, 
-            'first_message': first_message, 
-            'pet_name': new_pet.name
-        })
+        return jsonify({'success': True, 'pet_id': new_pet.id, 'image_b64': image_b64, 'first_message': first_message, 'pet_name': new_pet.name})
     
     except Exception as e:
         print(f"오류 상세: {e}")
