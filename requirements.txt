@@ -1,6 +1,11 @@
 Flask
+gunicorn
+Flask-SQLAlchemy
+Flask-Login
+Flask-Bcrypt
 google-generativeai
 stability-sdk
 python-dotenv
 deep-translator
 Pillow
+requests
