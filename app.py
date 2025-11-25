@@ -166,12 +166,11 @@ def api_create_pet():
         
         answers = stability_api.generate(
             prompt=prompt,
-            steps=40, 
+            steps=30, 
             cfg_scale=7.0,
             width=1024,  
             height=1024, 
             samples=1,  
-            sampler=generation.SAMPLER_K_DPMPP_2M 
         )
 
         image_bytes = None
