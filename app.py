@@ -166,7 +166,7 @@ def api_create_pet():
         
         answers = stability_api.generate(
             prompt=prompt,
-            steps=30, 
+            steps=40, 
             cfg_scale=7.0,
             width=1024,  
             height=1024, 
