@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>로그인 - REMEMPET</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.jpg') }}" type="image/jpeg">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap'); 
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #fef9f6; 
+            overflow: hidden; 
+        }
+        .login-page {
+            display: flex;
+            width: 900px; 
+            height: 550px; 
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden; 
+        }
+
+        .login-left {
+            flex: 1;
+            background: linear-gradient(135deg, #FFC1A1 0%, #F79489 100%);
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .login-left h2 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 2;
+        }
+        .login-left p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            max-width: 80%;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+  
+        .cloud-shape {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.2;
+            filter: blur(20px);
+            z-index: 1;
+        }
+        .cloud-shape.one { width: 180px; height: 180px; top: -50px; left: -50px; }
+        .cloud-shape.two { width: 120px; height: 120px; bottom: -30px; right: -30px; }
+        .cloud-shape.three { width: 100px; height: 100px; top: 100px; right: -20px; }
+
+
+        .login-right {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            box-sizing: border-box;
+        }
+        .login-right h2 {
+            font-size: 2rem;
+            color: #4F4A45;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            width: 100%;
+            max-width: 300px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .form-group input {
+            width: calc(100% - 40px); 
+            padding: 12px 20px 12px 40px; 
+            border: 1px solid #eee;
+            border-radius: 10px;
+            background-color: #fdfdfd;
+            font-size: 1rem;
+            color: #4F4A45;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .form-group input::placeholder {
+            color: #b0b0b0;
+        }
+        .form-group .icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #b0b0b0;
+            font-size: 1.1rem;
+        }
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 300px;
+            margin-bottom: 25px;
+            font-size: 0.85rem;
+        }
+        .form-options label {
+            display: flex;
+            align-items: center;
+            color: #777;
+        }
+        .form-options input[type="checkbox"] {
+            margin-right: 5px;
+        }
+        .form-options a {
+            color: #F79489;
+            text-decoration: none;
+        }
+        .login-button {
+            width: 100%;
+            max-width: 300px;
+            padding: 12px;
+            background-color: #F79489; 
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .login-button:hover {
+            background-color: #f57d72;
+        }
+        .signup-link {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #777;
+        }
+        .signup-link a {
+            color: #F79489;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .flash { 
+            padding: 10px; margin-bottom: 10px; border-radius: 8px; 
+            width: 100%; max-width: 300px; text-align: center;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .danger { background-color: #f8d7da; color: #8a1420; }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="login-page">
+        <div class="login-left">
+            <h2>REMEMPET</h2>
+            <div class="cloud-shape one"></div>
+            <div class="cloud-shape two"></div>
+            <div class="cloud-shape three"></div>
+        </div>
+        <div class="login-right">
+            <h2>SIGN IN</h2>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            <form method="POST">
+                <div class="form-group">
+                    <i class="fas fa-envelope icon"></i>
+                    <input type="text" name="username" placeholder="E-mail" required>
+                </div>
+                <div class="form-group">
+                    <i class="fas fa-lock icon"></i>
+                    <input type="password" name="password" placeholder="Password" required>
+                </div>
+                <div class="form-options">
+                    <label>
+                        <input type="checkbox" name="remember"> Remember
+                    </label>
+                    <a href="#">Forget Password?</a>
+                </div>
+                <button type="submit" class="login-button">LOGIN</button>
+            </form>
+            <p class="signup-link">아직 계정이 없으신가요? <a href="{{ url_for('register') }}">회원가입</a></p>
+        </div>
+    </div>
+</body>
+</html>

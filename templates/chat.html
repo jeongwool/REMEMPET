@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ pet.name }}와(과)의 대화</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.jpg') }}" type="image/jpeg">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #fef9f6; color: #4F4A45; margin: 0; padding: 2rem; }
+        nav { display: flex; justify-content: space-between; align-items: center; background: white; padding: 1rem 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        nav h2 { margin: 0; color: #F79489; }
+        nav a { color: #F79489; text-decoration: none; font-weight: 500; }
+        
+        .chat-container {
+            display: flex;
+            gap: 2rem;
+            margin-top: 2rem;
+            height: 80vh; 
+        }
+        
+        .pet-profile {
+            flex: 1;
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        .pet-profile h3 { color: #F79489; }
+        .pet-profile img {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            border-radius: 12px;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            margin-bottom: 1rem;
+        }
+        
+        .chat-interface {
+            flex: 1;
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-interface h3 { color: #F79489; }
+        .chat-history {
+            flex-grow: 1;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #fdfdfd;
+            display: flex; 
+            flex-direction: column;
+        }
+        .message { 
+            margin-bottom: 1rem; 
+            max-width: 85%; 
+            line-height: 1.5; 
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+        }
+        .message.user { 
+            align-self: flex-end; 
+            background-color: #fce0dc; 
+            color: #333; 
+            border-radius: 12px 12px 0 12px; 
+        }
+        .message.model { 
+            align-self: flex-start; 
+            background-color: #f0f0f0; 
+            color: #4F4A45; 
+            border-radius: 12px 12px 12px 0; 
+        }
+
+        .loading-bubble {
+            background-color: #f0f0f0;
+            color: #4F4A45;
+            padding: 10px 15px;
+            border-radius: 12px 12px 12px 0;
+            display: none; 
+            width: fit-content;
+            margin-bottom: 1rem;
+            align-self: flex-start;
+        }
+        .dot-flashing {
+            display: inline-block;
+            width: 5px;
+            height: 5px;
+            border-radius: 5px;
+            background-color: #999;
+            animation: dot-flashing 1s infinite linear alternate;
+            margin: 0 2px;
+            vertical-align: middle;
+        }
+        .dot-flashing:nth-child(1) { animation-delay: 0s; }
+        .dot-flashing:nth-child(2) { animation-delay: 0.2s; }
+        .dot-flashing:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes dot-flashing {
+            0% { opacity: 0.2; transform: translateY(0px); }
+            100% { opacity: 1; transform: translateY(-3px); }
+        }
+        
+        .chat-input { display: flex; gap: 0.5rem; }
+        .chat-input input { flex-grow: 1; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; }
+        .chat-input button { padding: 0.75rem 1rem; background-color: #F79489; color: white; border: none; border-radius: 8px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <nav>
+        <h2>🐾 {{ pet.name }}와(과) 대화하기 🐾</h2>
+        <div>
+            <strong>{{ current_user.username }}</strong>님 | 
+            <a href="{{ url_for('home') }}">내 강아지 목록으로</a> | 
+            <a href="{{ url_for('logout') }}">로그아웃</a>
+        </div>
+    </nav>
+    
+    <div class="chat-container">
+        <aside class="pet-profile">
+            <h3>❤️ {{ pet.name }}의 모습 ❤️</h3>
+            <img src="{{ url_for('static', filename='pet_images/' + pet.image_file) }}" alt="{{ pet.name }}의 모습">
+        </aside>
+
+        <main class="chat-interface" data-pet-id="{{ pet.id }}">
+            <h3>💬 {{ pet.name }}와(과)의 대화</h3>
+            
+            <div class="chat-history" id="chat-history">
+                {% for message in history %}
+                    {% if message.role == 'user' %}
+                        <div class="message user"><strong>나:</strong> {{ message.content }}</div>
+                    {% else %}
+                        <div class="message model"><strong>{{ pet.name }}:</strong> {{ message.content }}</div>
+                    {% endif %}
+                {% endfor %}
+                
+                <div id="loading-indicator" class="loading-bubble">
+                    🐶 <strong>{{ pet.name }}</strong>(이)가 말하는 중<span class="dot-flashing"></span><span class="dot-flashing"></span><span class="dot-flashing"></span>
+                </div>
+            </div>
+            
+            <div class="chat-input">
+                <input type="text" id="msg_input" placeholder="메시지를 입력하세요...">
+                <button id="send_btn">전송</button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const chatHistory = document.getElementById('chat-history');
+        const msgInput = document.getElementById('msg_input');
+        const sendBtn = document.getElementById('send_btn');
+        const loadingIndicator = document.getElementById('loading-indicator'); 
+        const petId = document.querySelector('.chat-interface').dataset.petId; 
+        
+        function scrollToBottom() {
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+        scrollToBottom();
+
+        async function sendMessage() {
+            const message = msgInput.value.trim();
+            if (message === "") return;
+
+            const userMsgDiv = document.createElement('div');
+            userMsgDiv.className = 'message user';
+            userMsgDiv.innerHTML = `<strong>나:</strong> ${message}`;
+
+            chatHistory.insertBefore(userMsgDiv, loadingIndicator);
+            
+            msgInput.value = "";
+
+            loadingIndicator.style.display = 'block';
+            scrollToBottom();
+            sendBtn.disabled = true;
+
+            try {
+                const response = await fetch(`/api/chat/${petId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+                
+                const result = await response.json();
+                
+                loadingIndicator.style.display = 'none';
+
+                const botMsgDiv = document.createElement('div');
+                botMsgDiv.className = 'message model';
+                if (result.reply) {
+                    botMsgDiv.innerHTML = `<strong>{{ pet.name }}:</strong> ${result.reply}`;
+                } else {
+                    botMsgDiv.innerHTML = `<strong>{{ pet.name }}:</strong> (오류: ${result.error})`;
+                }
+                
+                chatHistory.insertBefore(botMsgDiv, loadingIndicator);
+
+            } catch (error) {
+                loadingIndicator.style.display = 'none';
+                
+                const errorMsgDiv = document.createElement('div');
+                errorMsgDiv.className = 'message model';
+                errorMsgDiv.innerHTML = `<strong>{{ pet.name }}:</strong> (클라이언트 오류: ${error})`;
+                chatHistory.insertBefore(errorMsgDiv, loadingIndicator);
+            }
+            scrollToBottom();
+            sendBtn.disabled = false;
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        
+        msgInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

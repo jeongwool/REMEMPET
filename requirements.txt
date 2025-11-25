@@ -1,0 +1,6 @@
+Flask
+google-generativeai
+stability-sdk
+python-dotenv
+deep-translator
+Pillow
