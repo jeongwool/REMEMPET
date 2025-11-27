@@ -36,7 +36,7 @@ if not GOOGLE_API_KEY or not STABILITY_API_KEY:
 genai.configure(api_key=GOOGLE_API_KEY)
 
 # 🚨 모델 이름 수정 (현재 지원되는 정식 이름)
-CHAT_MODEL_NAME = "gemini-1.5-pro-latest"  
+CHAT_MODEL_NAME = "gemini-1.5-pro"  
 # 또는 "gemini-pro"로 바꿔도 OK
 
 STABILITY_API_HOST = "https://api.stability.ai"
