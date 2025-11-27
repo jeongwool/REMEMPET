@@ -1,170 +1,299 @@
 <!DOCTYPE html>
+
 <html lang="ko">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>REMEMPET - 강아지 만들기</title>
+
     <style>
+
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #fef9f6; color: #4F4A45; margin: 0; padding: 2rem; }
+
         nav { display: flex; justify-content: space-between; align-items: center; background: white; padding: 1rem 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+
         nav h2 { margin: 0; color: #F79489; }
+
         nav a { color: #F79489; text-decoration: none; font-weight: 500; }
+
         .container { display: flex; flex-wrap: wrap; gap: 2rem; margin-top: 2rem; }
+
         .sidebar { flex: 1; min-width: 300px; background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+
         .main-content { flex: 2; min-width: 300px; background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+
         
+
         input { display: block; width: 100%; padding: 0.8rem; margin-bottom: 1rem; border: 1px solid #eee; border-radius: 8px; box-sizing: border-box; font-size: 1rem; background: #fdfdfd; }
+
         label { font-weight: bold; margin-bottom: 0.5rem; display: block; color: #555; }
+
         
+
         button { width: 100%; padding: 0.8rem; background-color: #F79489; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: bold; }
+
         button:hover { background-color: #f57d72; }
+
         button:disabled { background-color: #fcdad6; }
+
         
+
         .pet-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
         .pet-item { display: flex; justify-content: space-between; align-items: center; background: #fdf0ee; border-radius: 20px; padding: 0.5rem 1rem; }
+
         .pet-item a { text-decoration: none; color: #F79489; font-weight: bold; flex-grow: 1; }
+
         .delete-btn { background: none; border: none; color: #F79489; cursor: pointer; font-size: 1.2rem; padding: 0 0.5rem; }
+
         
+
         #generated-pet { text-align: center; display: none; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #eee; }
+
         #pet_description { color: #333; font-size: 1.2rem; font-weight: bold; margin-bottom: 1.5rem; }
+
         #go-to-chat { display: inline-block; width: 100%; padding: 1rem; background-color: #F79489; color: white; border-radius: 8px; text-decoration: none; font-weight: bold; }
+
     </style>
+
 </head>
+
 <body>
+
     <nav>
+
         <h2>🐾 REMEMPET: 나의 반려견 기억 🐾</h2>
+
         <div><strong>{{ current_user.username }}</strong>님 <a href="{{ url_for('logout') }}">로그아웃</a></div>
+
     </nav>
+
     
+
     <div class="container">
+
         <aside class="sidebar">
+
             <h3>❤️ 기억 만들기 ❤️</h3>
-            <label>이름: <span style="color:red">*</span></label> 
-            <input type="text" id="name_input" placeholder="초코">
+
+            <label>이름:</label> <input type="text" id="name_input" placeholder="초코">
+
             
-            <label>종: <span style="color:red">*</span></label>
+
+            <label>종:</label>
+
             <input list="breeds" id="breed_input" placeholder="목록에서 선택하거나 직접 입력">
+
             <datalist id="breeds">
+
                 <option value="골든 리트리버"></option>
+
                 <option value="포메라니안"></option>
+
                 <option value="푸들"></option>
+
                 <option value="치와와"></option>
+
                 <option value="닥스훈트"></option>
+
                 <option value="시바견"></option>
+
                 <option value="말티즈"></option>
+
                 <option value="진돗개"></option>
+
                 <option value="시츄"></option>
+
                 <option value="요크셔 테리어"></option>
+
             </datalist>
+
             
-            <label>색깔: <span style="color:red">*</span></label> 
-            <input type="text" id="color_input" placeholder="하얀색">
-            
-            <label>나이: <span style="color:red">*</span></label> 
-            <input type="text" id="age_input" placeholder="15살">
-            
+
+            <label>색깔:</label> <input type="text" id="color_input" placeholder="하얀색">
+
+            <label>나이:</label> <input type="text" id="age_input" placeholder="15살">
+
             <label>좋아했던 음식:</label> <input type="text" id="food_input" placeholder="닭가슴살">
+
             <label>가고 싶은 곳:</label> <input type="text" id="background_input" placeholder="공원">
+
             
+
             <button id="create_btn">강아지 만들기</button>
+
         </aside>
 
+
+
         <main class="main-content">
+
             <h3>🐾 나의 강아지 목록</h3>
+
             <div class="pet-list" id="pet-list-container">
+
                 {% for pet in pets %}
+
                     <div class="pet-item" data-pet-id="{{ pet.id }}">
+
                         <a href="{{ url_for('chat_page', pet_id=pet.id) }}">🐶 {{ pet.name }} ({{ pet.breed }})</a>
+
                         <button class="delete-btn">×</button>
+
                     </div>
+
                 {% endfor %}
+
             </div>
+
+
 
             <div id="generated-pet">
+
                 <h3>✨ 알림 ✨</h3>
+
                 <p id="pet_description"></p>
+
                 <a id="go-to-chat" href="#">대화하러 가기</a>
+
             </div>
+
         </main>
+
     </div>
 
-    <script>
-        document.getElementById('create_btn').addEventListener('click', async () => {
-            const createBtn = document.getElementById('create_btn');
-            
-            // [수정] 값을 먼저 가져옵니다.
-            const name = document.getElementById('name_input').value.trim();
-            const breed = document.getElementById('breed_input').value.trim();
-            const color = document.getElementById('color_input').value.trim();
-            const age = document.getElementById('age_input').value.trim();
-            const food = document.getElementById('food_input').value.trim();
-            const bg = document.getElementById('background_input').value.trim();
 
-            // [추가] 필수값 검증 로직
-            if (!name || !breed || !color || !age) {
-                alert("⚠️ 필수 항목을 모두 입력해주세요!\n(이름, 종, 색깔, 나이는 꼭 필요해요)");
-                return; // 함수를 여기서 강제로 종료합니다 (서버로 전송 안 함)
-            }
+
+    <script>
+
+        document.getElementById('create_btn').addEventListener('click', async () => {
+
+            const createBtn = document.getElementById('create_btn');
 
             const genDiv = document.getElementById('generated-pet');
+
             const petDesc = document.getElementById('pet_description');
+
             const chatLink = document.getElementById('go-to-chat');
 
+
+
             createBtn.disabled = true;
+
             createBtn.innerText = '생성 중...';
+
             
+
             genDiv.style.display = 'block';
-            petDesc.innerText = 'AI가 강아지의 기억을 연결하고 있습니다...';
+
+            petDesc.innerText = '천국에서 강아지가 내려오고 있습니다... (조금만 기다려주세요)';
+
             chatLink.style.display = 'none';
 
+
+
             const data = {
-                name: name,
-                breed: breed,
-                color: color,
-                age: age,
-                favorite_food: food,
-                background: bg
+
+                name: document.getElementById('name_input').value,
+
+                breed: document.getElementById('breed_input').value,
+
+                color: document.getElementById('color_input').value,
+
+                age: document.getElementById('age_input').value,
+
+                favorite_food: document.getElementById('food_input').value,
+
+                background: document.getElementById('background_input').value
+
             };
 
+
+
             try {
+
                 const response = await fetch('/api/create_pet', {
+
                     method: 'POST',
+
                     headers: { 'Content-Type': 'application/json' },
+
                     body: JSON.stringify(data)
+
                 });
+
                 const result = await response.json();
+
                 
+
                 if (result.success) {
+
                     petDesc.innerText = '생성이 완료되었습니다! 이제 강아지와 대화해보세요.';
+
                     chatLink.href = `/chat/${result.pet_id}`;
+
                     chatLink.style.display = 'inline-block';
+
                     
+
                     // 목록 추가
+
                     const list = document.getElementById('pet-list-container');
+
                     const div = document.createElement('div');
+
                     div.className = 'pet-item';
+
                     div.setAttribute('data-pet-id', result.pet_id);
+
                     div.innerHTML = `<a href="/chat/${result.pet_id}">🐶 ${result.pet_name} (${data.breed})</a><button class="delete-btn">×</button>`;
+
                     list.appendChild(div);
+
                 } else {
+
                     petDesc.innerText = `⚠️ 실패: ${result.error}`;
+
                 }
+
             } catch (e) { petDesc.innerText = `⚠️ 오류: ${e}`; }
+
             
+
             createBtn.disabled = false;
+
             createBtn.innerText = '강아지 만들기';
+
         });
 
+
+
         // 삭제 기능
+
         document.getElementById('pet-list-container').addEventListener('click', async (e) => {
+
             if (e.target.classList.contains('delete-btn')) {
+
                 const item = e.target.closest('.pet-item');
+
                 if (confirm('정말 삭제할까요?')) {
+
                     const res = await fetch(`/api/delete_pet/${item.dataset.petId}`, { method: 'POST' });
+
                     if ((await res.json()).success) item.remove();
+
                 }
+
             }
+
         });
+
     </script>
+
 </body>
+
 </html>
