@@ -34,7 +34,7 @@ if not GOOGLE_API_KEY or not STABILITY_API_KEY:
 
 genai.configure(api_key=GOOGLE_API_KEY)
 # 모델명을 최신으로 유지
-CHAT_MODEL_NAME = "gemini-pro" 
+CHAT_MODEL_NAME = "gemini-1.5-flash"
 
 STABILITY_API_HOST = "https://api.stability.ai"
 STABILITY_ENGINE_ID = "stable-diffusion-xl-1024-v1-0"
@@ -297,5 +297,6 @@ def api_delete_pet(pet_id):
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all() 
-    app.run(debug=True, port=5000)
+        db.create_all()
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
+
