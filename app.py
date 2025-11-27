@@ -34,7 +34,7 @@ if not GOOGLE_API_KEY or not STABILITY_API_KEY:
 
 genai.configure(api_key=GOOGLE_API_KEY)
 
-CHAT_MODEL_NAME = "models/gemini-1.5-flash-latest"
+CHAT_MODEL_NAME = "models/gemini-pro"
 
 STABILITY_API_HOST = "https://api.stability.ai"
 STABILITY_ENGINE_ID = "stable-diffusion-xl-1024-v1-0"
