@@ -32,11 +32,7 @@ STABILITY_API_KEY = os.getenv("STABILITY_API_KEY")
 if not GOOGLE_API_KEY or not STABILITY_API_KEY:
     print("⚠️ WARNING: API 키가 설정되지 않았습니다.")
 
-# 🔥 최신 Gemini API(v1) 강제 고정 (가장 중요)
-genai.configure(
-    api_key=GOOGLE_API_KEY,
-    api_version="v1"
-)
+genai.configure(api_key=GOOGLE_API_KEY)
 
 # 최신 모델
 CHAT_MODEL_NAME = "gemini-1.5-flash"
