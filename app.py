@@ -32,7 +32,10 @@ STABILITY_API_KEY = os.getenv("STABILITY_API_KEY")
 if not GOOGLE_API_KEY or not STABILITY_API_KEY:
     print("⚠️ WARNING: API 키가 설정되지 않았습니다.")
 
-genai.configure(api_key=GOOGLE_API_KEY)
+genai.configure(
+    api_key=GOOGLE_API_KEY,
+    api_version="v1"
+)
 
 CHAT_MODEL_NAME = "models/gemini-pro"
 
