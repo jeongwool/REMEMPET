@@ -3,7 +3,7 @@ gunicorn
 Flask-SQLAlchemy
 Flask-Login
 Flask-Bcrypt
-google-generativeai
+google-generativeai>=0.8.3
 stability-sdk
 python-dotenv
 deep-translator
