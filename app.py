@@ -206,7 +206,7 @@ def api_create_pet():
         db.session.commit()
 
         # 🔥 모델 생성 방식 수정됨
-        model = genai.GenerativeModel(model_name=CHAT_MODEL_NAME)
+        model = genai.GenerativeModel(CHAT_MODEL_NAME)
 
         chat = model.start_chat(history=[
             {"role": "user", "parts": [persona_prompt]},
@@ -275,7 +275,8 @@ def api_chat(pet_id):
     if pet.owner != current_user:
         return jsonify({'error': '권한 없음'}), 403
     
-    msg = request.json.get("message", "").trim()
+    msg = request.json.get("message", "").strip()
+    
     if not msg:
         return jsonify({'reply': "..."})
 
@@ -291,7 +292,7 @@ def api_chat(pet_id):
         gemini_history.append({"role": role, "parts": [h.content]})
 
     try:
-        model = genai.GenerativeModel(model_name=CHAT_MODEL_NAME)
+        model = genai.GenerativeModel(CHAT_MODEL_NAME)
         chat = model.start_chat(history=gemini_history)
 
         reply = chat.send_message(msg).text
