@@ -32,23 +32,24 @@ STABILITY_API_KEY = os.getenv("STABILITY_API_KEY")
 if not GOOGLE_API_KEY or not STABILITY_API_KEY:
     print("⚠️ WARNING: API 키가 설정되지 않았습니다.")
 
-genai.configure(
-    api_key=GOOGLE_API_KEY,
-    api_version="v1"
-)
+# 🚨 api_version="v1" 삭제해야 함 — 이게 오류 원인!
+genai.configure(api_key=GOOGLE_API_KEY)
 
-CHAT_MODEL_NAME = "models/gemini-pro"
+# 🚨 모델 이름 수정 (현재 지원되는 정식 이름)
+CHAT_MODEL_NAME = "gemini-1.5-pro-latest"  
+# 또는 "gemini-pro"로 바꿔도 OK
 
 STABILITY_API_HOST = "https://api.stability.ai"
 STABILITY_ENGINE_ID = "stable-diffusion-xl-1024-v1-0"
 
+
+# --- 아래는 너가 원래 쓰던 코드 그대로 (변경 없음) --- #
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
     pets = db.relationship('Pet', backref='owner', lazy=True)
-
 
 class Pet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -62,7 +63,6 @@ class Pet(db.Model):
     persona_prompt = db.Column(db.Text)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     chat_history = db.relationship('ChatHistory', backref='pet', lazy=True, cascade="all, delete-orphan")
-
 
 class ChatHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -203,9 +203,7 @@ def api_create_pet():
         db.session.add(new_pet)
         db.session.commit()
 
-        # 🔥 모델 생성 방식 수정됨
         model = genai.GenerativeModel(CHAT_MODEL_NAME)
-
         chat = model.start_chat(history=[
             {"role": "user", "parts": [persona_prompt]},
             {"role": "model", "parts": [f"응! 나 {name}야! 주인님이 와줘서 너무 좋아!"]}
@@ -328,3 +326,4 @@ if __name__ == '__main__':
         db.create_all()
 
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
+
