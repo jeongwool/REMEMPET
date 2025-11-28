@@ -17,14 +17,46 @@ label { font-weight: bold; margin-bottom: 0.5rem; display: block; color: #555; }
 button { width: 100%; padding: 0.8rem; background-color: #F79489; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: bold; }
 button:hover { background-color: #f57d72; }
 button:disabled { background-color: #fcdad6; }
-.pet-list { display: flex; flex-direction: column; gap: 0.3rem; }
-.pet-item { position: relative; display: flex; align-items: center; background: #fdf0ee; border-radius: 16px; padding: 0.6rem 1rem; }
-.pet-item a { text-decoration: none; color: #F79489; font-weight: bold; flex-grow: 1; }
-.pet-item .delete-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #F79489; cursor: pointer; font-size: 1.2rem; }
-.pet-item .delete-btn:hover { color: #d65f55; transform: translateY(-50%) scale(1.15); }
-#generated-pet { text-align: center; display: none; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #eee; }
-#pet_description { color: #333; font-size: 1.2rem; font-weight: bold; margin-bottom: 1.5rem; }
-#go-to-chat { display: inline-block; width: 100%; padding: 1rem; background-color: #F79489; color: white; border-radius: 8px; text-decoration: none; font-weight: bold; }
+.pet-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.pet-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fdf0ee;
+    border-radius: 16px;
+    padding: 0.8rem 1.2rem;
+    min-height: 55px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+
+.pet-item a {
+    text-decoration: none;
+    color: #F79489;
+    font-weight: bold;
+    font-size: 1.05rem;
+    flex-grow: 1;
+}
+
+.pet-item .delete-btn {
+    background: none;
+    border: none;
+    color: #F79489;
+    cursor: pointer;
+    font-size: 1.4rem;
+    margin-left: 10px;
+    margin-right: -5px; /* 바깥에 붙는 느낌 */
+}
+
+.pet-item .delete-btn:hover {
+    color: #d65f55;
+    transform: scale(1.2);
+}
 </style>
 </head>
 <body>
