@@ -185,7 +185,7 @@ def api_create_pet():
         if not name or not breed or not color or not age:
             return jsonify({'success': False, 'error': '필수 항목 누락'}), 400
 
-        # 이미지 생성 prompt 번역 포함
+        # 이미지 prompt 번역 포함
         t_breed, t_color, t_food, t_bg = translate(breed), translate(color), translate(food), translate(bg)
         prompt = f"A cute, happy {t_color} {t_breed} dog, {age} years old, eating {t_food}, in {t_bg}. 3D Pixar style, character portrait."
 
@@ -205,7 +205,7 @@ def api_create_pet():
         db.session.commit()
 
         # 첫 메시지는 Gemini 사용 안 함 (Timeout 방지)
-        first_msg = f"안녕! 나 {name}야. 하늘에서 다시 만나서 너무 좋아!"
+        first_msg = f"안녕! 나 {name}야. 오랜만이다 친구...다시 만나서 너무 좋아!"
 
         db.session.add(ChatHistory(role='model', content=first_msg, pet_id=new_pet.id))
         db.session.commit()
