@@ -281,6 +281,8 @@ def api_delete_pet(pet_id):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
-
+    
+    if os.getenv('FLASK_ENV') == 'development':
+        app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
+    else:
+        pass
