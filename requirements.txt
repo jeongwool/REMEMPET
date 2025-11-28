@@ -4,7 +4,6 @@ Flask-SQLAlchemy
 Flask-Login
 Flask-Bcrypt
 google-generativeai>=0.8.5
-stability-sdk
 python-dotenv
 deep-translator
 Pillow
