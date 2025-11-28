@@ -8,7 +8,6 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fef9f6; color: #4F4A45; margin: 0; padding: 2rem; height: 100vh; box-sizing: border-box; }
         .container { display: flex; gap: 2rem; height: 85vh; max-width: 1200px; margin: 0 auto; }
         
-        /* 왼쪽 프로필 */
         .profile { flex: 1; background: white; padding: 2rem; border-radius: 16px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; }
         .img-container { width: 100%; max-width: 300px; aspect-ratio: 1/1; border-radius: 12px; overflow: hidden; margin-bottom: 1rem; background: #eee; position: relative; }
         .profile img { width: 100%; height: 100%; object-fit: cover; }
@@ -66,7 +65,7 @@
                 {% endfor %}
                 
                 <div id="thinking-bubble" class="msg thinking">
-                    🐾 {{ pet.name }}가 생각 중<span class="dots"><span>.</span><span>.</span><span>.</span></span>
+                    🐾 {{ pet.name }}가 말하는 중<span class="dots"><span>.</span><span>.</span><span>.</span></span>
                 </div>
             </div>
             
@@ -137,7 +136,7 @@
                 // 4. 강아지 답장 추가
                 const replyDiv = document.createElement('div');
                 replyDiv.className = 'msg model';
-                replyDiv.innerText = data.reply || `(오류가 났어요 ㅠㅠ: ${data.error})`;
+                replyDiv.innerText = data.reply || `(오류가 났어요: ${data.error})`;
                 history.insertBefore(replyDiv, thinkingBubble);
                 
             } catch (e) {
