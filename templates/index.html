@@ -8,7 +8,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>REMEMPET - 강아지 만들기</title>
+    <title>REMEMPET - 나의 그리운 강아지</title>
 
     <style>
 
@@ -66,7 +66,7 @@
 
     <nav>
 
-        <h2>🐾 REMEMPET: 나의 반려견 기억 🐾</h2>
+        <h2>🐾 REMEMPET: 나의 반려견 🐾</h2>
 
         <div><strong>{{ current_user.username }}</strong>님 <a href="{{ url_for('logout') }}">로그아웃</a></div>
 
@@ -78,9 +78,9 @@
 
         <aside class="sidebar">
 
-            <h3>❤️ 기억 만들기 ❤️</h3>
+            <h3>❤️ 강아지 떠올리기 ❤️</h3>
 
-            <label>이름:</label> <input type="text" id="name_input" placeholder="초코">
+            <label>이름:</label> <input type="text" id="name_input">
 
             
 
@@ -114,17 +114,17 @@
 
             
 
-            <label>색깔:</label> <input type="text" id="color_input" placeholder="하얀색">
+            <label>색깔:</label> <input type="text" id="color_input">
 
-            <label>나이:</label> <input type="text" id="age_input" placeholder="15살">
+            <label>나이:</label> <input type="text" id="age_input" placeholder="~살">
 
-            <label>좋아했던 음식:</label> <input type="text" id="food_input" placeholder="닭가슴살">
+            <label>좋아했던 음식:</label> <input type="text" id="food_input" placeholder="ex) 구운 닭가슴살">
 
-            <label>가고 싶은 곳:</label> <input type="text" id="background_input" placeholder="공원">
+            <label>가고 싶은 곳:</label> <input type="text" id="background_input" placeholder="ex) 공원, 프랑스">
 
             
 
-            <button id="create_btn">강아지 만들기</button>
+            <button id="create_btn">진행하기</button>
 
         </aside>
 
@@ -132,7 +132,7 @@
 
         <main class="main-content">
 
-            <h3>🐾 나의 강아지 목록</h3>
+            <h3>🐾 나의 소중한 별들</h3>
 
             <div class="pet-list" id="pet-list-container">
 
@@ -158,7 +158,7 @@
 
                 <p id="pet_description"></p>
 
-                <a id="go-to-chat" href="#">대화하러 가기</a>
+                <a id="go-to-chat" href="#">강아지랑 놀러가기기</a>
 
             </div>
 
@@ -184,13 +184,13 @@
 
             createBtn.disabled = true;
 
-            createBtn.innerText = '생성 중...';
+            createBtn.innerText = '조금만 기다려주세요...';
 
             
 
             genDiv.style.display = 'block';
 
-            petDesc.innerText = '천국에서 강아지가 내려오고 있습니다... (조금만 기다려주세요)';
+            petDesc.innerText = '천국에서 강아지가 내려오고 있습니다...';
 
             chatLink.style.display = 'none';
 
@@ -232,7 +232,7 @@
 
                 if (result.success) {
 
-                    petDesc.innerText = '생성이 완료되었습니다! 이제 강아지와 대화해보세요.';
+                    petDesc.innerText = '이제 강아지와 대화해보세요.';
 
                     chatLink.href = `/chat/${result.pet_id}`;
 
@@ -266,7 +266,7 @@
 
             createBtn.disabled = false;
 
-            createBtn.innerText = '강아지 만들기';
+            createBtn.innerText = '강아지 떠올리기기';
 
         });
 
