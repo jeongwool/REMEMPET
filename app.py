@@ -45,9 +45,6 @@ genai.configure(
 
 CHAT_MODEL_NAME = "gemini-pro"
 
-STABILITY_API_HOST = "https://api.stability.ai"
-STABILITY_ENGINE_ID = "stable-diffusion-512-v2-1" 
-
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -91,36 +88,36 @@ def translate(text):
         return text
 
 
-def generate_image_rest(prompt):
-    url = f"{STABILITY_API_HOST}/v1/generation/{STABILITY_ENGINE_ID}/text-to-image"
+def generate_image_stability_v2(prompt):
+    """Stability AI v2 API 사용"""
+    url = "https://api.stability.ai/v2beta/stable-image/generate/core"
+    
     headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": f"Bearer {STABILITY_API_KEY}"
+        "Authorization": f"Bearer {STABILITY_API_KEY}",
+        "Accept": "image/*"
     }
-    body = {
-        "text_prompts": [{"text": prompt}],
-        "cfg_scale": 7,
-        "height": 512,
-        "width": 512,
-        "samples": 1,
-        "steps": 25,
+    
+    # multipart/form-data로 전송
+    files = {
+        "prompt": (None, prompt),
+        "output_format": (None, "png"),
+        "aspect_ratio": (None, "1:1")  # 1:1 비율로 생성
     }
-
+    
     try:
-        response = requests.post(url, headers=headers, json=body, timeout=120)
+        response = requests.post(url, headers=headers, files=files, timeout=120)
         
         if response.status_code != 200:
             raise Exception(f"Stability API Error: {response.status_code} - {response.text}")
-
-        data = response.json()
-        image_data = base64.b64decode(data["artifacts"][0]["base64"])
         
-        del data
+        # v2는 바로 이미지 바이트를 반환
+        image_data = response.content
+        
         del response
         gc.collect()
         
         return image_data
+        
     except Exception as e:
         gc.collect()
         raise e
@@ -203,7 +200,8 @@ def api_create_pet():
         t_breed, t_color, t_food, t_bg = translate(breed), translate(color), translate(food), translate(bg)
         prompt = f"A cute, happy {t_color} {t_breed} dog, {age} years old, eating {t_food}, in {t_bg}. 3D Pixar style, character portrait."
 
-        image_bytes = generate_image_rest(prompt)
+        # v2 API 사용
+        image_bytes = generate_image_stability_v2(prompt)
         image = Image.open(io.BytesIO(image_bytes))
         
         image.thumbnail((800, 800), Image.Resampling.LANCZOS)
@@ -256,7 +254,6 @@ def api_chat(pet_id):
     if not msg:
         return jsonify({'reply': "..."})
 
-    # 최근 12개만 가져오기 (메모리 절약)
     history_db = ChatHistory.query.filter_by(pet_id=pet.id)\
         .order_by(ChatHistory.id.desc())\
         .limit(12)\
