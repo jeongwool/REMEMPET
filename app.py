@@ -17,6 +17,8 @@ from deep_translator import GoogleTranslator
 load_dotenv()
 
 app = Flask(__name__)
+login_manager.login_view = 'login'
+login_manager.login_message_category = "info"
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_key_123')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
