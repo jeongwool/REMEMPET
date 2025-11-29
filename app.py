@@ -38,12 +38,8 @@ STABILITY_API_KEY = os.getenv("STABILITY_API_KEY")
 if not GOOGLE_API_KEY or not STABILITY_API_KEY:
     print("⚠️ WARNING: API 키가 설정되지 않았습니다.")
 
-genai.configure(
-    api_key=GOOGLE_API_KEY,
-    client_options={"api_endpoint": "https://generativelanguage.googleapis.com"}
-)
-
-CHAT_MODEL_NAME = "gemini-pro"
+genai.configure(api_key=GOOGLE_API_KEY)
+CHAT_MODEL_NAME = "gemini-1.5-flash"   # 🚀 더 빠르고 무료에 적합한 모델로 변경
 
 
 class User(db.Model, UserMixin):
@@ -89,7 +85,6 @@ def translate(text):
 
 
 def generate_image_stability_v2(prompt):
-    """Stability AI v2 API 사용"""
     url = "https://api.stability.ai/v2beta/stable-image/generate/core"
     
     headers = {
@@ -97,30 +92,17 @@ def generate_image_stability_v2(prompt):
         "Accept": "image/*"
     }
     
-    # multipart/form-data로 전송
     files = {
         "prompt": (None, prompt),
         "output_format": (None, "png"),
-        "aspect_ratio": (None, "1:1")  # 1:1 비율로 생성
+        "aspect_ratio": (None, "1:1")
     }
     
-    try:
-        response = requests.post(url, headers=headers, files=files, timeout=120)
-        
-        if response.status_code != 200:
-            raise Exception(f"Stability API Error: {response.status_code} - {response.text}")
-        
-        # v2는 바로 이미지 바이트를 반환
-        image_data = response.content
-        
-        del response
-        gc.collect()
-        
-        return image_data
-        
-    except Exception as e:
-        gc.collect()
-        raise e
+    response = requests.post(url, headers=headers, files=files, timeout=120)
+    if response.status_code != 200:
+        raise Exception(f"Stability API Error: {response.status_code} - {response.text}")
+
+    return response.content
 
 
 @app.route("/")
@@ -143,43 +125,49 @@ def chat_page(pet_id):
     return render_template('chat.html', pet=pet, history=history_db)
 
 
-@app.route("/register", methods=['GET', 'POST'])
-def register():
-    if current_user.is_authenticated:
-        return redirect(url_for('home'))
-
-    if request.method == 'POST':
-        hashed_pw = bcrypt.generate_password_hash(request.form['password']).decode('utf-8')
-        user = User(username=request.form['username'], password=hashed_pw)
-        db.session.add(user)
-        db.session.commit()
-        login_user(user)
-        return redirect(url_for('home'))
-
-    return render_template('register.html')
-
-
-@app.route("/login", methods=['GET', 'POST'])
-def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('home'))
-
-    if request.method == 'POST':
-        user = User.query.filter_by(username=request.form['username']).first()
-        if user and bcrypt.check_password_hash(user.password, request.form['password']):
-            login_user(user, remember=True)
-            return redirect(url_for('home'))
-        else:
-            flash('로그인 실패.', 'danger')
-
-    return render_template('login.html')
-
-
-@app.route("/logout")
+@app.route("/api/chat/<int:pet_id>", methods=['POST'])
 @login_required
-def logout():
-    logout_user()
-    return redirect(url_for('login'))
+def api_chat(pet_id):
+    pet = Pet.query.get_or_404(pet_id)
+    if pet.owner != current_user:
+        return jsonify({'error': '권한 없음'}), 403
+
+    msg = request.json.get("message", "").strip()
+    if not msg:
+        return jsonify({'reply': "..."})
+
+    # 최근 12개 히스토리만 사용
+    history_db = ChatHistory.query.filter_by(pet_id=pet.id).order_by(ChatHistory.id.desc()).limit(12).all()
+    history_db.reverse()
+
+    # 📌 Gemini 직접 호출하지 않고, 안정적인 HTTP 프록시 방식 사용
+    try:
+        url = "https://gemini-chat-api.vercel.app/api/chat"
+        payload = {
+            "apiKey": GOOGLE_API_KEY,
+            "model": CHAT_MODEL_NAME,
+            "messages": [
+                {"role": "system", "content": pet.persona_prompt},
+                *[
+                    {"role": h.role, "content": h.content}
+                    for h in history_db
+                ],
+                {"role": "user", "content": msg}
+            ]
+        }
+        res = requests.post(url, json=payload, timeout=30)
+        reply = res.json().get("reply", "응답 오류 발생 😢")
+
+        db.session.add(ChatHistory(role='user', content=msg, pet_id=pet.id))
+        db.session.add(ChatHistory(role='model', content=reply, pet_id=pet.id))
+        db.session.commit()
+
+        return jsonify({'reply': reply})
+
+    except Exception as e:
+        print(f"채팅 오류: {e}")
+        gc.collect()
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route("/api/create_pet", methods=['POST'])
@@ -198,22 +186,15 @@ def api_create_pet():
             return jsonify({'success': False, 'error': '필수 항목 누락'}), 400
 
         t_breed, t_color, t_food, t_bg = translate(breed), translate(color), translate(food), translate(bg)
-        prompt = f"A cute, happy {t_color} {t_breed} dog, {age} years old, eating {t_food}, in {t_bg}. 3D Pixar style, character portrait."
+        prompt = f"A cute, happy {t_color} {t_breed} dog, {age} years old, eating {t_food}, in {t_bg}. 3D Pixar style."
 
-        # v2 API 사용
         image_bytes = generate_image_stability_v2(prompt)
         image = Image.open(io.BytesIO(image_bytes))
-        
         image.thumbnail((800, 800), Image.Resampling.LANCZOS)
         
         filename = f"pet_{current_user.id}_{int(time.time())}.png"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         image.save(filepath, "PNG", optimize=True)
-
-        image.close()
-        del image
-        del image_bytes
-        gc.collect()
 
         persona_prompt = f"당신은 반려견 '{name}'입니다. 종:{breed}, 색:{color}, 나이:{age}, 음식:{food}. 반말을 쓰고 다정하게 대해주세요."
 
@@ -226,7 +207,6 @@ def api_create_pet():
         db.session.commit()
 
         first_msg = f"안녕! 나 {name}야. 오랜만이다 친구...다시 만나서 너무 좋아!"
-
         db.session.add(ChatHistory(role='model', content=first_msg, pet_id=new_pet.id))
         db.session.commit()
 
@@ -241,54 +221,6 @@ def api_create_pet():
         print(f"생성 오류: {e}")
         gc.collect()
         return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@app.route("/api/chat/<int:pet_id>", methods=['POST'])
-@login_required
-def api_chat(pet_id):
-    pet = Pet.query.get_or_404(pet_id)
-    if pet.owner != current_user:
-        return jsonify({'error': '권한 없음'}), 403
-
-    msg = request.json.get("message", "").strip()
-    if not msg:
-        return jsonify({'reply': "..."})
-
-    history_db = ChatHistory.query.filter_by(pet_id=pet.id)\
-        .order_by(ChatHistory.id.desc())\
-        .limit(12)\
-        .all()
-    history_db.reverse()
-
-    gemini_history = [
-        {"role": "user", "parts": [pet.persona_prompt]},
-        {"role": "model", "parts": ["알겠어!"]}
-    ]
-
-    for h in history_db:
-        role = "user" if h.role == "user" else "model"
-        gemini_history.append({"role": role, "parts": [h.content]})
-
-    try:
-        model = genai.GenerativeModel(CHAT_MODEL_NAME)
-        chat = model.start_chat(history=gemini_history)
-
-        reply = chat.send_message(msg).text
-
-        db.session.add(ChatHistory(role='user', content=msg, pet_id=pet.id))
-        db.session.add(ChatHistory(role='model', content=reply, pet_id=pet.id))
-        db.session.commit()
-
-        del chat
-        del model
-        gc.collect()
-
-        return jsonify({'reply': reply})
-
-    except Exception as e:
-        print(f"채팅 오류: {e}")
-        gc.collect()
-        return jsonify({'error': str(e)}), 500
 
 
 @app.route("/api/delete_pet/<int:pet_id>", methods=['POST'])
@@ -309,7 +241,7 @@ def api_delete_pet(pet_id):
         ChatHistory.query.filter_by(pet_id=pet.id).delete()
         db.session.delete(pet)
         db.session.commit()
-        
+
         gc.collect()
         return jsonify({'success': True})
 
