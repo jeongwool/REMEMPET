@@ -17,6 +17,7 @@ label { font-weight: bold; margin-bottom: 0.5rem; display: block; color: #555; }
 button { width: 100%; padding: 0.8rem; background-color: #F79489; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: bold; }
 button:hover { background-color: #f57d72; }
 button:disabled { background-color: #fcdad6; }
+
 .pet-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -50,20 +51,43 @@ button:disabled { background-color: #fcdad6; }
     cursor: pointer;
     font-size: 1.4rem;
     margin-left: 10px;
-    margin-right: -5px; 
+    margin-right: -5px;
 }
 
 .pet-item .delete-btn:hover {
     color: #d65f55;
     transform: scale(1.2);
 }
-</style>
+
+/* ⬇️ 대화하러가기 버튼 스타일 */
+#generated-pet {
+    text-align: center;
+    display: none;
+    margin-top: 2.5rem;
+}
+
+#go-to-chat {
+    display: none;
+    margin-top: 1.4rem;
+    padding: 1rem 1.5rem;
+    background-color: #F79489;
+    color: white;
+    border-radius: 10px;
+    text-decoration: none;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+#go-to-chat:hover {
+    background-color: #f57d72;
+}
+    </style>
 </head>
 <body>
     <nav>
         <h2>🐾 REMEMPET: 나의 반려견 🐾</h2>
         <div><strong>{{ current_user.username }}</strong>님 <a href="{{ url_for('logout') }}">로그아웃</a></div>
     </nav>
+
     <div class="container">
         <aside class="sidebar">
             <h3>❤️ 강아지 떠올리기 ❤️</h3>
@@ -88,6 +112,7 @@ button:disabled { background-color: #fcdad6; }
             <label>가고 싶은 곳:</label><input type="text" id="background_input" placeholder="ex) 공원, 프랑스">
             <button id="create_btn">진행하기</button>
         </aside>
+
         <main class="main-content">
             <h3>🐾 나의 소중한 별들</h3>
             <div class="pet-list" id="pet-list-container">
@@ -98,6 +123,7 @@ button:disabled { background-color: #fcdad6; }
                 </div>
                 {% endfor %}
             </div>
+
             <div id="generated-pet">
                 <h3>✨ 알림 ✨</h3>
                 <p id="pet_description"></p>
@@ -105,17 +131,20 @@ button:disabled { background-color: #fcdad6; }
             </div>
         </main>
     </div>
+
     <script>
         document.getElementById('create_btn').addEventListener('click', async () => {
-            const createBtn = document.getElementById('create_btn');
-            const genDiv = document.getElementById('generated-pet');
-            const petDesc = document.getElementById('pet_description');
-            const chatLink = document.getElementById('go-to-chat');
-            createBtn.disabled = true;
-            createBtn.innerText = '조금만 기다려주세요...';
-            genDiv.style.display = 'block';
-            petDesc.innerText = '천국에서 강아지가 내려오고 있습니다...';
-            chatLink.style.display = 'none';
+            const btn = document.getElementById('create_btn');
+            const gen = document.getElementById('generated-pet');
+            const desc = document.getElementById('pet_description');
+            const link = document.getElementById('go-to-chat');
+
+            btn.disabled = true;
+            btn.innerText = '생각 중...';
+            gen.style.display = 'block';
+            desc.innerText = '🌟 천국에서 강아지가 내려오고 있어요... 잠시만요!';
+            link.style.display = 'none';
+
             const data = {
                 name: document.getElementById('name_input').value,
                 breed: document.getElementById('breed_input').value,
@@ -124,30 +153,30 @@ button:disabled { background-color: #fcdad6; }
                 favorite_food: document.getElementById('food_input').value,
                 background: document.getElementById('background_input').value
             };
+
             try {
-                const response = await fetch('/api/create_pet', {
+                const res = await fetch('/api/create_pet', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-                const result = await response.json();
+                const result = await res.json();
+
                 if (result.success) {
-                    petDesc.innerText = '이제 강아지와 대화해보세요.';
-                    chatLink.href = `/chat/${result.pet_id}`;
-                    chatLink.style.display = 'inline-block';
-                    const list = document.getElementById('pet-list-container');
-                    const div = document.createElement('div');
-                    div.className = 'pet-item';
-                    div.setAttribute('data-pet-id', result.pet_id);
-                    div.innerHTML = `<a href="/chat/${result.pet_id}">🐶 ${result.pet_name} (${data.breed})</a><button class="delete-btn">×</button>`;
-                    list.appendChild(div);
+                    desc.innerText = '✨ 강아지가 도착했어요! 대화를 시작해볼까요?';
+                    link.href = `/chat/${result.pet_id}`;
+                    link.style.display = 'inline-block';
                 } else {
-                    petDesc.innerText = `⚠️ 실패: ${result.error}`;
+                    desc.innerText = `⚠️ 실패: ${result.error}`;
                 }
-            } catch (e) { petDesc.innerText = `⚠️ 오류: ${e}`; }
-            createBtn.disabled = false;
-            createBtn.innerText = '강아지 떠올리기기';
+            } catch (e) {
+                desc.innerText = `⚠️ 오류: ${e}`;
+            }
+
+            btn.disabled = false;
+            btn.innerText = '강아지 떠올리기';
         });
+
         document.getElementById('pet-list-container').addEventListener('click', async (e) => {
             if (e.target.classList.contains('delete-btn')) {
                 const item = e.target.closest('.pet-item');
