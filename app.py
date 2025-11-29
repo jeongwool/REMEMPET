@@ -4,7 +4,6 @@ import time
 import base64
 import requests
 import gc
-import urllib.parse
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -34,11 +33,11 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+STABILITY_API_KEY = os.getenv("STABILITY_API_KEY")
 
-if not GOOGLE_API_KEY:
-    print("⚠️ WARNING: GOOGLE_API_KEY 누락")
+if not GOOGLE_API_KEY or not STABILITY_API_KEY:
+    print("⚠️ WARNING: API 키가 설정되지 않았습니다.")
 
-# ⭐ 작동하는 버전과 동일하게!
 genai.configure(api_key=GOOGLE_API_KEY)
 CHAT_MODEL_NAME = "models/gemini-pro-latest"
 
@@ -85,25 +84,37 @@ def translate(text):
         return text
 
 
-def generate_image_pollinations(prompt):
-    """Pollinations.ai - 완전 무료"""
+def generate_image_stability_v2(prompt):
+    """Stability AI v2 API"""
+    url = "https://api.stability.ai/v2beta/stable-image/generate/core"
+    
+    headers = {
+        "Authorization": f"Bearer {STABILITY_API_KEY}",
+        "Accept": "image/*"
+    }
+    
+    files = {
+        "prompt": (None, prompt),
+        "output_format": (None, "png"),
+        "aspect_ratio": (None, "1:1")
+    }
+    
     try:
-        encoded_prompt = urllib.parse.quote(prompt)
-        seed = int(time.time())
-        url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&seed={seed}"
+        response = requests.post(url, headers=headers, files=files, timeout=120)
         
-        print(f"Pollinations 요청: {url}")
+        if response.status_code != 200:
+            raise Exception(f"Stability API Error: {response.status_code} - {response.text}")
         
-        response = requests.get(url, timeout=60)
+        image_data = response.content
         
-        if response.status_code == 200:
-            return response.content
-        else:
-            raise Exception(f"Pollinations Error: {response.status_code}")
-            
+        del response
+        gc.collect()
+        
+        return image_data
+        
     except Exception as e:
-        print(f"이미지 생성 오류: {e}")
-        return None
+        gc.collect()
+        raise e
 
 
 @app.route("/")
@@ -183,7 +194,7 @@ def api_create_pet():
             "Pixar style, Disney animation style, octane render, 8k, soft lighting, happy expression."
         )
 
-        image_bytes = generate_image_pollinations(prompt)
+        image_bytes = generate_image_stability_v2(prompt)
         
         if not image_bytes:
             raise Exception("이미지 데이터를 받아오지 못했습니다.")
@@ -203,7 +214,6 @@ def api_create_pet():
         db.session.add(new_pet)
         db.session.commit()
         
-        # ⭐ 첫 메시지 생성 (작동하는 버전과 동일)
         model = genai.GenerativeModel(CHAT_MODEL_NAME)
         chat = model.start_chat(history=[
             {"role": "user", "parts": [persona_prompt]}, 
@@ -238,7 +248,6 @@ def api_chat(pet_id):
     if not msg:
         return jsonify({'reply': "..."})
 
-    # ⭐ 전체 히스토리 (작동하는 버전과 동일)
     history_db = ChatHistory.query.filter_by(pet_id=pet.id).order_by(ChatHistory.id.asc()).all()
     
     gemini_history = [
