@@ -2,14 +2,14 @@ import os
 import multiprocessing
 
 # Render Free 플랜 최적화
-workers = 1  # 절대 늘리지 마세요!
-worker_class = "sync"
-threads = 2
+workers = 1  
+worker_class = "gthread"  
+threads = 4      
 worker_connections = 50
 
 # 타임아웃 (이미지 생성 고려)
-timeout = 180
-graceful_timeout = 180
+timeout = 120
+graceful_timeout = 120
 keepalive = 5
 
 # 메모리 관리 - 주기적 재시작
