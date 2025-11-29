@@ -44,7 +44,7 @@ genai.configure(
 )
 
 # 🔹 변경된 부분 — 지원되는 안정적인 무료 모델
-CHAT_MODEL_NAME = "gemini-1.5-flash"
+CHAT_MODEL_NAME = "gemini-pro"
 
 
 class User(db.Model, UserMixin):
