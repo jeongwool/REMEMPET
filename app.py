@@ -46,7 +46,7 @@ genai.configure(
 CHAT_MODEL_NAME = "gemini-pro"
 
 STABILITY_API_HOST = "https://api.stability.ai"
-STABILITY_ENGINE_ID = "stable-diffusion-v1-6"
+STABILITY_ENGINE_ID = "stable-diffusion-512-v2-1" 
 
 
 class User(db.Model, UserMixin):
