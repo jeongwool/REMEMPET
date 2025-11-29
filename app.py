@@ -204,7 +204,7 @@ def api_create_pet():
         image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         image.close()
 
-        persona_prompt = f"당신은 반려견 '{name}'입니다. 종:{breed}, 색:{color}, 나이:{age}, 음식:{food}. 반말을 쓰고 다정하게 대해주세요."
+        persona_prompt = f"""당신은 하늘나라에 있는 반려견 '{name}'입니다. 종:{breed}, 색:{color}, 나이:{age}, 좋아하는 음식:{food}. 주인과 다시 만나서 너무 기쁘고, 보고 싶었던 마음을 표현합니다. 반말로 다정하고 그리워하는 톤으로 대화해주세요. '하늘나라', '무지개다리', '별나라' 같은 표현을 자연스럽게 사용하세요."""
         
         new_pet = Pet(
             name=name, breed=breed, color=color, age=age, 
@@ -219,7 +219,7 @@ def api_create_pet():
             {"role": "user", "parts": [persona_prompt]}, 
             {"role": "model", "parts": [f"안녕! 나 {name}야!"]}
         ])
-        first_msg = chat.send_message(f"'{name}'으로서 반말로 따뜻한 첫인사를 해줘.").text
+        first_msg = chat.send_message(f"'{name}'으로서, 하늘나라에서 오랜만에 주인을 만난 기쁨을 반말로 따뜻하게 표현해줘. 보고 싶었다는 마음을 담아서.").text
         
         db.session.add(ChatHistory(role='model', content=first_msg, pet_id=new_pet.id))
         db.session.commit()
