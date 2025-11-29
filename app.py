@@ -253,7 +253,7 @@ def api_chat(pet_id):
 
     history_db = ChatHistory.query.filter_by(pet_id=pet.id)\
         .order_by(ChatHistory.id.desc())\
-        .limit(12)\
+        .limit(6)\
         .all()
     history_db.reverse()
 
@@ -267,10 +267,30 @@ def api_chat(pet_id):
         gemini_history.append({"role": role, "parts": [h.content]})
 
     try:
-        model = genai.GenerativeModel(CHAT_MODEL_NAME)
+        model = genai.GenerativeModel(
+            CHAT_MODEL_NAME,
+            generation_config={
+                "temperature": 0.9,
+                "max_output_tokens": 150, 
+            }
+        )
         chat = model.start_chat(history=gemini_history)
 
-        reply = chat.send_message(msg).text
+        import signal
+        
+        def timeout_handler(signum, frame):
+            raise TimeoutError("Gemini API 응답 시간 초과")
+        
+        # Unix 시스템에서만 작동 (Render는 Linux)
+        try:
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(10) 
+            
+            reply = chat.send_message(msg).text
+            
+            signal.alarm(0)
+        except:
+            reply = chat.send_message(msg).text
 
         db.session.add(ChatHistory(role='user', content=msg, pet_id=pet.id))
         db.session.add(ChatHistory(role='model', content=reply, pet_id=pet.id))
@@ -282,6 +302,10 @@ def api_chat(pet_id):
 
         return jsonify({'reply': reply})
 
+    except TimeoutError:
+        print("Gemini API 타임아웃!")
+        return jsonify({'reply': '(생각하는 데 시간이 너무 오래 걸렸어... 다시 말해줄래? 🐶)'}), 200
+        
     except Exception as e:
         print(f"채팅 오류: {e}")
         gc.collect()
