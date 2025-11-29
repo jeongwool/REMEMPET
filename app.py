@@ -49,7 +49,7 @@ if not GOOGLE_API_KEY or not STABILITY_API_KEY:
 genai.configure(api_key=GOOGLE_API_KEY)
 
 # [수정 2] 전시회용으로 속도가 훨씬 빠르고 안정적인 최신 모델 사용
-CHAT_MODEL_NAME = "gemini-1.5-flash"
+CHAT_MODEL_NAME = "gemini-1.5-flash-001"
 
 
 # -----------------------
