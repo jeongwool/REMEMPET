@@ -18,48 +18,77 @@ button { width: 100%; padding: 0.8rem; background-color: #F79489; color: white; 
 button:hover { background-color: #f57d72; }
 button:disabled { background-color: #fcdad6; }
 
+/* ⭐ 새로운 스타일 - 횡스크롤 카드 */
 .pet-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1rem;
+    display: flex;
+    gap: 1.5rem;
+    overflow-x: auto;
+    padding: 1rem 0;
+    scroll-behavior: smooth;
+}
+
+.pet-list::-webkit-scrollbar {
+    height: 8px;
+}
+
+.pet-list::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 10px;
+}
+
+.pet-list::-webkit-scrollbar-thumb {
+    background: #F79489;
+    border-radius: 10px;
 }
 
 .pet-item {
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    min-width: 280px;
     background: #fdf0ee;
-    border-radius: 16px;
-    padding: 0.8rem 1.2rem;
-    min-height: 55px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    border-radius: 24px;
+    padding: 1.8rem 1.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
 }
 
 .pet-item a {
     text-decoration: none;
     color: #F79489;
     font-weight: bold;
-    font-size: 1.05rem;
-    flex-grow: 1;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .pet-item .delete-btn {
-    background: none;
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: white;
     border: none;
     color: #F79489;
     cursor: pointer;
-    font-size: 1.4rem;
-    margin-left: 10px;
-    margin-right: -5px;
+    font-size: 1.3rem;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .pet-item .delete-btn:hover {
-    color: #d65f55;
-    transform: scale(1.2);
+    background: #F79489;
+    color: white;
+    transform: scale(1.1);
 }
 
-/* ⬇️ 대화하러가기 버튼 스타일 */
 #generated-pet {
     text-align: center;
     display: none;
@@ -118,8 +147,13 @@ button:disabled { background-color: #fcdad6; }
             <div class="pet-list" id="pet-list-container">
                 {% for pet in pets %}
                 <div class="pet-item" data-pet-id="{{ pet.id }}">
-                    <a href="{{ url_for('chat_page', pet_id=pet.id) }}">🐶 {{ pet.name }} ({{ pet.breed }})</a>
                     <button class="delete-btn">×</button>
+                    <a href="{{ url_for('chat_page', pet_id=pet.id) }}">
+                        <span>💕</span>
+                        {{ pet.name }}
+                        <span>💕</span>
+                    </a>
+                    <p style="margin: 0.5rem 0 0 0; color: #999; font-size: 0.9rem;">{{ pet.breed }}</p>
                 </div>
                 {% endfor %}
             </div>
@@ -166,6 +200,23 @@ button:disabled { background-color: #fcdad6; }
                     desc.innerText = '✨ 강아지가 도착했어요! 대화를 시작해볼까요?';
                     link.href = `/chat/${result.pet_id}`;
                     link.style.display = 'inline-block';
+                    
+                    // 리스트에 추가
+                    const list = document.getElementById('pet-list-container');
+                    const div = document.createElement('div');
+                    div.className = 'pet-item';
+                    div.setAttribute('data-pet-id', result.pet_id);
+                    div.innerHTML = `
+                        <button class="delete-btn">×</button>
+                        <a href="/chat/${result.pet_id}">
+                            <span>💕</span>
+                            ${data.name}
+                            <span>💕</span>
+                        </a>
+                        <p style="margin: 0.5rem 0 0 0; color: #999; font-size: 0.9rem;">${data.breed}</p>
+                    `;
+                    list.appendChild(div);
+                    list.scrollTo({ left: list.scrollWidth, behavior: 'smooth' });
                 } else {
                     desc.innerText = `⚠️ 실패: ${result.error}`;
                 }
