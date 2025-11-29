@@ -3,6 +3,7 @@ import io
 import time
 import base64
 import requests
+import gc
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -18,6 +19,11 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_key_123')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 5,
+    'pool_recycle': 300,
+}
 app.config['UPLOAD_FOLDER'] = 'static/pet_images'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -95,20 +101,29 @@ def generate_image_rest(prompt):
     body = {
         "text_prompts": [{"text": prompt}],
         "cfg_scale": 7,
-        "height": 1024,
-        "width": 1024,
+        "height": 512,
+        "width": 512,
         "samples": 1,
-        "steps": 30,
+        "steps": 25,
     }
 
-    response = requests.post(url, headers=headers, json=body)
+    try:
+        response = requests.post(url, headers=headers, json=body, timeout=120)
+        
+        if response.status_code != 200:
+            raise Exception(f"Stability API Error: {response.status_code} - {response.text}")
 
-    if response.status_code != 200:
-        raise Exception(f"Stability API Error: {response.status_code} - {response.text}")
-
-    data = response.json()
-    image_data = base64.b64decode(data["artifacts"][0]["base64"])
-    return image_data
+        data = response.json()
+        image_data = base64.b64decode(data["artifacts"][0]["base64"])
+        
+        del data
+        del response
+        gc.collect()
+        
+        return image_data
+    except Exception as e:
+        gc.collect()
+        raise e
 
 
 @app.route("/")
@@ -185,14 +200,22 @@ def api_create_pet():
         if not name or not breed or not color or not age:
             return jsonify({'success': False, 'error': '필수 항목 누락'}), 400
 
-        # 이미지 prompt 번역 포함
         t_breed, t_color, t_food, t_bg = translate(breed), translate(color), translate(food), translate(bg)
         prompt = f"A cute, happy {t_color} {t_breed} dog, {age} years old, eating {t_food}, in {t_bg}. 3D Pixar style, character portrait."
 
         image_bytes = generate_image_rest(prompt)
         image = Image.open(io.BytesIO(image_bytes))
+        
+        image.thumbnail((800, 800), Image.Resampling.LANCZOS)
+        
         filename = f"pet_{current_user.id}_{int(time.time())}.png"
-        image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        image.save(filepath, "PNG", optimize=True)
+
+        image.close()
+        del image
+        del image_bytes
+        gc.collect()
 
         persona_prompt = f"당신은 반려견 '{name}'입니다. 종:{breed}, 색:{color}, 나이:{age}, 음식:{food}. 반말을 쓰고 다정하게 대해주세요."
 
@@ -204,7 +227,6 @@ def api_create_pet():
         db.session.add(new_pet)
         db.session.commit()
 
-        # 첫 메시지는 Gemini 사용 안 함 (Timeout 방지)
         first_msg = f"안녕! 나 {name}야. 오랜만이다 친구...다시 만나서 너무 좋아!"
 
         db.session.add(ChatHistory(role='model', content=first_msg, pet_id=new_pet.id))
@@ -219,6 +241,7 @@ def api_create_pet():
 
     except Exception as e:
         print(f"생성 오류: {e}")
+        gc.collect()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -233,7 +256,12 @@ def api_chat(pet_id):
     if not msg:
         return jsonify({'reply': "..."})
 
-    history_db = ChatHistory.query.filter_by(pet_id=pet.id).order_by(ChatHistory.id.asc()).all()
+    # 최근 12개만 가져오기 (메모리 절약)
+    history_db = ChatHistory.query.filter_by(pet_id=pet.id)\
+        .order_by(ChatHistory.id.desc())\
+        .limit(12)\
+        .all()
+    history_db.reverse()
 
     gemini_history = [
         {"role": "user", "parts": [pet.persona_prompt]},
@@ -254,9 +282,15 @@ def api_chat(pet_id):
         db.session.add(ChatHistory(role='model', content=reply, pet_id=pet.id))
         db.session.commit()
 
+        del chat
+        del model
+        gc.collect()
+
         return jsonify({'reply': reply})
 
     except Exception as e:
+        print(f"채팅 오류: {e}")
+        gc.collect()
         return jsonify({'error': str(e)}), 500
 
 
@@ -269,12 +303,21 @@ def api_delete_pet(pet_id):
         return jsonify({'success': False}), 403
 
     try:
+        if pet.image_file != 'default.jpg':
+            try:
+                os.remove(os.path.join(app.config['UPLOAD_FOLDER'], pet.image_file))
+            except:
+                pass
+        
         ChatHistory.query.filter_by(pet_id=pet.id).delete()
         db.session.delete(pet)
         db.session.commit()
+        
+        gc.collect()
         return jsonify({'success': True})
 
     except Exception as e:
+        gc.collect()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -284,5 +327,3 @@ if __name__ == '__main__':
     
     if os.getenv('FLASK_ENV') == 'development':
         app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
-    else:
-        pass
